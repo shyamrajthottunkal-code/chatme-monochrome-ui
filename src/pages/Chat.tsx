@@ -1,10 +1,15 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { ChatHeader } from "@/components/ChatHeader";
 import { MessageBubble } from "@/components/MessageBubble";
 import { MessageInput } from "@/components/MessageInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
+import { PinnedMessages } from "@/components/PinnedMessages";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Video, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -15,6 +20,21 @@ interface Message {
   fileUrl?: string;
   metadata?: any;
 }
+
+interface PinnedMessage {
+  id: string;
+  text: string;
+  timestamp: Date;
+}
+
+const backgroundStyles = {
+  default: "bg-background",
+  "gradient-blue": "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900",
+  "gradient-purple": "bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900",
+  "gradient-green": "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900",
+  "pattern-dots": "bg-background bg-[radial-gradient(circle_at_1px_1px,hsl(var(--muted))_1px,transparent_0)] bg-[size:24px_24px]",
+  "pattern-waves": "bg-background bg-[linear-gradient(135deg,hsl(var(--muted))_25%,transparent_25%,transparent_50%,hsl(var(--muted))_50%,hsl(var(--muted))_75%,transparent_75%,transparent)] bg-[size:20px_20px]",
+};
 
 const initialMessages: Message[] = [
   {
@@ -40,9 +60,15 @@ const initialMessages: Message[] = [
   },
 ];
 
-const Index = () => {
+const Chat = () => {
+  const { chatId } = useParams();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([
+    { id: "p1", text: "Welcome message: Please be respectful", timestamp: new Date() }
+  ]);
   const [isTyping, setIsTyping] = useState(false);
+  const [showPinned, setShowPinned] = useState(true);
+  const [background, setBackground] = useState<keyof typeof backgroundStyles>("default");
 
   const handleSendMessage = (text: string, type = "text", file?: File | Blob, metadata?: any) => {
     const newMessage: Message = {
@@ -56,14 +82,12 @@ const Index = () => {
 
     setMessages((prev) => [...prev, newMessage]);
     
-    // Show success toast for file uploads
     if (type !== "text") {
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully`);
     }
     
     setIsTyping(true);
 
-    // Simulate AI response
     setTimeout(() => {
       const responses: Record<string, string> = {
         voice: "I received your voice message! In a real app, this would be transcribed and processed.",
@@ -85,16 +109,57 @@ const Index = () => {
     }, 2000);
   };
 
+  const handleUnpin = (id: string) => {
+    setPinnedMessages((prev) => prev.filter((msg) => msg.id !== id));
+    toast.success("Message unpinned");
+  };
+
+  const handleVideoCall = () => {
+    toast.success("Starting video call...");
+  };
+
+  const handleVoiceCall = () => {
+    toast.success("Starting voice call...");
+  };
+
   return (
-    <div className="flex flex-col h-screen max-w-2xl mx-auto bg-background">
-      <ChatHeader 
-        contactName="AI Bot" 
-        contactAvatar="/placeholder.svg"
-        isOnline={true}
-      />
+    <div className="flex flex-col h-screen">
+      <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--chat-header))] border-b">
+        <ChatHeader 
+          contactName={`Chat ${chatId || "1"}`}
+          contactAvatar="/placeholder.svg"
+          isOnline={true}
+        />
+        <div className="flex gap-2 ml-auto">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleVoiceCall}
+            className="rounded-full"
+          >
+            <Phone className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleVideoCall}
+            className="rounded-full"
+          >
+            <Video className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+
+      {showPinned && (
+        <PinnedMessages
+          messages={pinnedMessages}
+          onUnpin={handleUnpin}
+          onClose={() => setShowPinned(false)}
+        />
+      )}
       
-      <ScrollArea className="flex-1 px-4 py-6">
-        <div className="space-y-1">
+      <ScrollArea className={cn("flex-1 px-4 py-6", backgroundStyles[background])}>
+        <div className="space-y-1 max-w-4xl mx-auto">
           {messages.map((message) => (
             <MessageBubble
               key={message.id}
@@ -117,4 +182,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Chat;
